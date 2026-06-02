@@ -5,12 +5,10 @@ use futures_lite::io::BufReader;
 use futures_lite::{AsyncBufReadExt, StreamExt};
 
 use std::marker::PhantomData;
-use std::str::FromStr;
 
 use crate::resp::WrappedResponse;
 use crate::{
     client::resp::{
-        read_resp_line,
         respmap::RespMap,
         respmap_handlers::{mixed_stream, tracks, ListallinfoResponse},
     },
@@ -78,25 +76,6 @@ impl<T: From<RespMap> + Into<WrappedResponse>> ResponseHandler for RespMapRespon
         }
 
         Ok(map.into())
-    }
-}
-
-pub struct SingleLineResp<T> {
-    _0: PhantomData<T>,
-}
-
-#[async_trait]
-impl<E: Into<crate::Error>, T: FromStr<Err = E> + Into<WrappedResponse>> ResponseHandler
-    for SingleLineResp<T>
-{
-    type Response = T;
-
-    async fn handle(reader: &mut BufReader<TcpStream>) -> Result<Self::Response, Error> {
-        let line = read_resp_line(reader).await?;
-
-        let (_key, value) = line.split_once(": ").ok_or(crate::Error::ValueError {msg: "invalid line".to_string() })?;
-
-        T::from_str(value).map_err(Into::into)
     }
 }
 
